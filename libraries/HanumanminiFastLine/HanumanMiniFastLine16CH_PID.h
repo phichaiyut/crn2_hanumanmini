@@ -235,7 +235,7 @@ void PID(int start, int end, int SpeedL,int SpeedR, float Kp, float Kd) {
   
   int Pos = readPosition(start, end, 250, 50);
   int Error = Pos - ((NUM_SENSORS - 1) * 1000 / 2);
-  int PID_Value = ((Kp / 1000) * Error) + ((Kd / 100) * (Error - LastError));
+  int PID_Value = (Kp * Error) + (Kd * (Error - LastError));
   LastError = Error;
   int LeftPower = SpeedL + PID_Value;
   int RightPower = SpeedR - PID_Value;
@@ -281,4 +281,103 @@ void TrackTimeForLineFast(int start, int end,int Speed,float Kp, float Kd,int To
   while (millis() <= EndTime) {
     PID(start,end,LeftBaseSpeed,RightBaseSpeed, Kp, Kd);
   }
+}
+
+// วิ่งตามเส้นพร้อมอ่าน Marker ด้วยเซนเซอร์ C[0] (ซ้าย) และ C[1] (ขวา)
+//   C[1] อย่างเดียว  -> นับ Marker ขวา ครบ FinishCount ครั้ง -> วิ่งต่ออีก RunTime ms แล้วหยุด
+//   C[0] อย่างเดียว  -> สลับความเร็ว ปกติ <-> ทางโค้ง
+//   C[0] และ C[1]    -> เส้นตัด ไม่ทำอะไร
+// จะทำงานตอนที่เซนเซอร์ออกจาก Marker แล้ว (C[0] < RefC && C[1] < RefC) โดยดูจากสถานะก่อนหน้า
+#define MARK_NONE  0
+#define MARK_LEFT  1
+#define MARK_RIGHT 2
+#define MARK_CROSS 3
+
+// Ramp Speed : เวลา (ms) ต่อการเปลี่ยนความเร็ว 1 ระดับ , 0 = เปลี่ยนทันที
+int RampStartTime = 5;  // ตอนออกตัว จาก 0 ถึงความเร็วปกติ เช่น 5 -> จาก 0 ถึง 60 ใช้เวลา 300 ms
+int RampUpTime = 5;     // เร่งความเร็ว ตอนออกจากโค้งกลับเป็นความเร็วปกติ
+int RampDownTime = 2;   // ลดความเร็ว (ก่อนเข้าโค้งควรลดให้ไว)
+
+void RampSpeed(int startT, int up, int down) {
+  RampStartTime = startT;
+  RampUpTime = up;
+  RampDownTime = down;
+}
+
+void RampSpeed(int up, int down) {
+  RampSpeed(up, up, down);
+}
+
+// ปรับ CurrentSpeed เข้าหา TargetSpeed ทีละ 1 ตามเวลาที่ตั้งไว้
+void UpdateRampSpeed(int &CurrentSpeed, int TargetSpeed, unsigned long &LastRamp, int UpTime) {
+  if (CurrentSpeed == TargetSpeed) {
+    LastRamp = millis();
+    return;
+  }
+  int StepTime = CurrentSpeed < TargetSpeed ? UpTime : RampDownTime;
+  if (StepTime <= 0) {
+    CurrentSpeed = TargetSpeed;
+  } else {
+    unsigned long Steps = (millis() - LastRamp) / StepTime;
+    if (Steps == 0) return;
+    LastRamp += Steps * StepTime;
+    int Diff = TargetSpeed - CurrentSpeed;
+    if ((unsigned long)abs(Diff) <= Steps) CurrentSpeed = TargetSpeed;
+    else CurrentSpeed += Diff > 0 ? (int)Steps : -(int)Steps;
+  }
+  BaseSpeed = CurrentSpeed;
+  InitialSpeed();
+}
+
+void TrackMarker(int start, int end, int SpeedNormal, int SpeedCurve, float Kp, float Kd, int FinishCount, int RunTime) {
+  int MarkState = MARK_NONE;
+  int RightCount = 0;
+  bool CurveMode = false;
+  int CurrentSpeed = RampStartTime > 0 ? 0 : SpeedNormal;  // ออกตัวจาก 0 แล้วค่อยๆ เร่ง
+  bool Starting = true;  // กำลังออกตัว ใช้ RampStartTime
+  int TargetSpeed = SpeedNormal;
+  unsigned long LastRamp = millis();
+
+  BaseSpeed = CurrentSpeed;
+  InitialSpeed();
+  while (1) {
+    UpdateRampSpeed(CurrentSpeed, TargetSpeed, LastRamp, Starting ? RampStartTime : RampUpTime);
+    if (CurrentSpeed == TargetSpeed) Starting = false;
+    ReadCalibrateC();
+    bool Left = C[0] > RefC;
+    bool Right = C[1] > RefC;
+
+    if (Left && Right) {
+      BZon();
+      MarkState = MARK_CROSS;
+    } else if (!Left && Right) {
+      BZon();
+      if (MarkState != MARK_CROSS) MarkState = MARK_RIGHT;
+    } else if (Left && !Right) {
+      BZon();
+      if (MarkState != MARK_CROSS) MarkState = MARK_LEFT;
+    } else {
+      BZoff();
+      if (MarkState == MARK_RIGHT) {
+        RightCount++;
+        if (RightCount >= FinishCount) break;
+      } else if (MarkState == MARK_LEFT) {
+        CurveMode = !CurveMode;
+        TargetSpeed = CurveMode ? SpeedCurve : SpeedNormal;
+        Starting = false;
+      }
+      MarkState = MARK_NONE;
+    }
+    PID(start, end, LeftBaseSpeed, RightBaseSpeed, Kp, Kd);
+  }
+
+  unsigned long EndTime = millis() + RunTime;
+  while (millis() <= EndTime) {
+    UpdateRampSpeed(CurrentSpeed, TargetSpeed, LastRamp, Starting ? RampStartTime : RampUpTime);
+    PID(start, end, LeftBaseSpeed, RightBaseSpeed, Kp, Kd);
+  }
+  BZoff();
+  MotorStop();
+  TrackTimeForLineFast(start, end, 0, Kp, Kd, 300);  // จัดหุ่นให้ตรงเส้นกับที่ 300 ms
+  MotorStop();
 }
