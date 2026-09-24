@@ -47,6 +47,15 @@ void RefLineValueC(int x) {
   RefC = x;
 }
 
+void clampSensorValueF(int x, int y) {
+  FRONT_MIN = x;
+  FRONT_MAX = y;
+}
+
+void clampSensorValueC(int x, int y) {
+  CENTER_MIN = x;
+  CENTER_MAX = y;
+}
 
 void SetBUZZER_PIN(int x){
     BUZZER_PIN = x;
