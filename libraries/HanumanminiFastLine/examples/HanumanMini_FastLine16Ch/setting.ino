@@ -13,9 +13,11 @@ void _setting() {
   Dottedline(0);      //ไม่มีเส้นประใส่ 0  >> มีเส้นประใส่ 1
   
   LoadCalibration();  //โหลดค่าจาก EEPROM
-
+clampSensorValueF(100, 900);
+clampSensorValueC(100, 900);
   // SerialSensor();           // Serial Monitor ค่าของ Sensor
   // SerialCalibrateSensor();  // Serial Monitor ค่าของ Sensor ที่ Calibrate แล้ว
   // CaliberateRobotSensor();  // Serial Monitor Calibrate ค่าแสงหุ่นยนต์
   // SerialPosition();
+  // SerialSensorC();        // Serial Monitor ค่าเซนเซอร์ C (Mark) ค่าดิบ / ค่า Calibrate / สถานะ Mark
 }

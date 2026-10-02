@@ -284,7 +284,6 @@ void CalibrateSensorC(int pauseTime, int samples) {
     for (int i = 0; i < 2; i++) {
       MinValueC[i] = (C[i] <= MinValueC[i] ? C[i] : MinValueC[i]);
       MaxValueC[i] = (C[i] >= MaxValueC[i] ? C[i] : MaxValueC[i]);
-      
     }
     delay(pauseTime);
   }
@@ -386,6 +385,11 @@ void SerialSensor() {
       Serial.print(F[_serialF]);
       Serial.print("\t");
     }
+    // ค่าเซนเซอร์ C (Mark) ซ้าย / ขวา
+    Serial.print("| C: ");
+    Serial.print(C[0]);
+    Serial.print("\t");
+    Serial.print(C[1]);
     Serial.println("");
     delay(50);
   }
@@ -400,7 +404,46 @@ void SerialCalibrateSensor() {
       Serial.print(F[_serialF]);
       Serial.print("\t");
     }
+    // ค่าเซนเซอร์ C (Mark) ซ้าย / ขวา
+    Serial.print("| C: ");
+    Serial.print(C[0]);
+    Serial.print("\t");
+    Serial.print(C[1]);
     Serial.println("");
+    delay(100);
+  }
+}
+
+// Serial Monitor ค่าเซนเซอร์ C (Mark) : ค่าดิบ , ค่าที่ Calibrate แล้ว และสถานะ Mark
+void SerialSensorC() {
+  Serial.print("MinC: ");
+  Serial.print(MinValueC[0]);
+  Serial.print(", ");
+  Serial.print(MinValueC[1]);
+  Serial.print("   MaxC: ");
+  Serial.print(MaxValueC[0]);
+  Serial.print(", ");
+  Serial.print(MaxValueC[1]);
+  Serial.print("   RefC: ");
+  Serial.println(RefC);
+  while (1) {
+    ReadC();
+    int raw0 = C[0];
+    int raw1 = C[1];
+    ReadCalibrateC();
+    Serial.print("Raw C0 = ");
+    Serial.print(raw0);
+    Serial.print("\tC1 = ");
+    Serial.print(raw1);
+    Serial.print("\t| Cal C0 = ");
+    Serial.print(C[0]);
+    Serial.print("\tC1 = ");
+    Serial.print(C[1]);
+    Serial.print("\t| ");
+    if (C[0] > RefC && C[1] > RefC) Serial.println("CROSS");
+    else if (C[1] > RefC) Serial.println("MARK RIGHT");
+    else if (C[0] > RefC) Serial.println("MARK LEFT");
+    else Serial.println("-");
     delay(100);
   }
 }
