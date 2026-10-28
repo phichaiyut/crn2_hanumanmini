@@ -15,21 +15,10 @@ uint16_t sensorValues[NUM_SENSORS];
 int LCh,LTurnSpdL, LTurnSpdR, TurnDelayL;
 int RCh,RTurnSpdL, RTurnSpdR, TurnDelayR;
 int LineColor = 0;
-int LineColorC = 0;
 int  BUZZER_PIN = 13;
 int volumesound = 2500;
-int REF = 500;
-int RefC = 500;
+int REF = 0;
 
-int FRONT_MIN = 100;
-int FRONT_MAX = 900;
-int CENTER_MIN = 100;
-int CENTER_MAX = 900;
-
-uint8_t C_PIN[2] = {A6,A7};
-uint16_t C[2];
-int MinValueC[2];
-int MaxValueC[2];
 
 void TrackLineColor(int Col) {
   LineColor = Col;
@@ -37,24 +26,6 @@ void TrackLineColor(int Col) {
 
 void RefLineValue(int x) {
   REF = x;
-}
-
-void TrackLineColorC(int Col) {
-  LineColorC = Col;
-}
-
-void RefLineValueC(int x) {
-  RefC = x;
-}
-
-void clampSensorValueF(int x, int y) {
-  FRONT_MIN = x;
-  FRONT_MAX = y;
-}
-
-void clampSensorValueC(int x, int y) {
-  CENTER_MIN = x;
-  CENTER_MAX = y;
 }
 
 void SetBUZZER_PIN(int x){
@@ -114,7 +85,6 @@ int analog(int __ch) {
   if(__ch==5) return analogRead(A5);
   if(__ch==6) return analogRead(A6);
   if(__ch==7) return analogRead(A7);
-  return 0;
 }
 
 void SaveCalibration() {
@@ -129,18 +99,6 @@ void SaveCalibration() {
   // Save Max
   for (int i = 0; i < NUM_SENSORS; i++) {
     EEPROM.put(addr, MaxValue[i]);
-    addr += sizeof(int);
-  }
-
-  // Save Min C
-  for (int i = 0; i < 2; i++) {
-    EEPROM.put(addr, MinValueC[i]);
-    addr += sizeof(int);
-  }
-
-  // Save Max C
-  for (int i = 0; i < 2; i++) {
-    EEPROM.put(addr, MaxValueC[i]);
     addr += sizeof(int);
   }
 
@@ -164,18 +122,6 @@ void LoadCalibration() {
     addr += sizeof(int);
   }
 
-  // Load Min C
-  for (int i = 0; i < 2; i++) {
-    EEPROM.get(addr, MinValueC[i]);
-    addr += sizeof(int);
-  }
-
-  // Load Max C
-  for (int i = 0; i < 2; i++) {
-    EEPROM.get(addr, MaxValueC[i]);
-    addr += sizeof(int);
-  }
-
   Serial.println("=== Loaded Calibration from EEPROM ===");
 
   // Show Min values
@@ -194,16 +140,6 @@ void LoadCalibration() {
   }
   Serial.println();
 
-  // Show C values
-  Serial.print("Min C: ");
-  Serial.print(MinValueC[0]);
-  Serial.print(", ");
-  Serial.println(MinValueC[1]);
-  Serial.print("Max C: ");
-  Serial.print(MaxValueC[0]);
-  Serial.print(", ");
-  Serial.println(MaxValueC[1]);
-
   Serial.println("=====================================");
 }
 
@@ -219,40 +155,34 @@ void Read() {
   }
 }
 
-void ReadC() {
-  for (int _sensor = 0; _sensor < 2; _sensor++) {
-    C[_sensor] = analogRead(C_PIN[_sensor]);
-  }
-}
-
 void ReadCalibrate() {
-  Read();
+  if(LineColor ==0){
+ Read();
   for (int i = 0; i < NUM_SENSORS; i++) {
-    F[i] = constrain(F[i], MinValue[F_PIN[i]], MaxValue[F_PIN[i]]);
-    int16_t x;
-    if (LineColor == 0)
-      x = map(F[i], MinValue[F_PIN[i]], MaxValue[F_PIN[i]], 1000, 0);
-    else
-      x = map(F[i], MinValue[F_PIN[i]], MaxValue[F_PIN[i]], 0, 1000);
-    if (x < FRONT_MIN) x = 0;
-    if (x > FRONT_MAX) x = 1000;
+    unsigned int calmin, calmax;
+    long x = 0;
+    calmin = MinValue[i];
+    calmax = MaxValue[i];
+    x = map(F[i], calmin, calmax, 0, 1000);
+    if (x < 0) x = 0;
+    if (x > 1000) x = 1000;
     F[i] = x;
   }
-}
-
-void ReadCalibrateC() {
-  ReadC();
-  for (int i = 0; i < 2; i++) {
-    C[i] = constrain(C[i], MinValueC[i], MaxValueC[i]);
-    int16_t x;
-    if (LineColorC == 0)
-      x = map(C[i], MinValueC[i], MaxValueC[i], 1000, 0);
-    else
-      x = map(C[i], MinValueC[i], MaxValueC[i], 0, 1000);
-    if (x < CENTER_MIN) x = 0;
-    if (x > CENTER_MAX) x = 1000;
-    C[i] = x;
+  }else{
+        Read();
+    for (int i = 0; i < NUM_SENSORS; i++) {
+      unsigned int calmin, calmax;
+      int x = 0;
+      calmin = MinValue[i];
+      calmax = MaxValue[i];
+      x = map(F[i], calmin, calmax, 0, 1000);
+      x = 800 - x;
+      if (x < 0) x = 0;
+      if (x > 1000) x = 1000;
+      F[i] = x;
+    }
   }
+ 
 }
 
 void CalibrateSensor(int pauseTime, int samples) {
@@ -274,35 +204,12 @@ void CalibrateSensor(int pauseTime, int samples) {
   }
 }
 
-void CalibrateSensorC(int pauseTime, int samples) {
-  for (int i = 0; i < 2; i++) {
-    MinValueC[i] = 1000;
-    MaxValueC[i] = 0;
-  }
-  for (int startSamp = 0; startSamp <= samples; startSamp++) {
-    ReadC();
-    for (int i = 0; i < 2; i++) {
-      MinValueC[i] = (C[i] <= MinValueC[i] ? C[i] : MinValueC[i]);
-      MaxValueC[i] = (C[i] >= MaxValueC[i] ? C[i] : MaxValueC[i]);
-    }
-    delay(pauseTime);
-  }
-  for (int i = 0; i < 2; i++) {
-    MinValueC[i] += 10;
-    MaxValueC[i] -= 40;
-  }
-}
-
 void CaliberateRobotSensor() {
   Serial.println("Press OK to start caribrate Front Sensor");
   OK();
   Serial.println("Caribrating");
   delay(500);
   CalibrateSensor(20, 200);
-  delay(500);
-  Serial.println("Press OK to start caribrate Center Sensor");
-  OK();
-  CalibrateSensorC(20, 200);
   delay(500);
   Serial.println("Finish");
   Serial.println("  ");
@@ -317,19 +224,6 @@ void CaliberateRobotSensor() {
   for (int i = 0; i < NUM_SENSORS; i++) {
     Serial.print(MaxValue[i]);
     if (i < NUM_SENSORS - 1) Serial.print(",");
-    else Serial.println(");");
-  }
-  Serial.print("SensorValueC (");
-  //MinValueC 
-  for (int i = 0; i < 2; i++) {
-    Serial.print(MinValueC[i]);
-    if (i < 2 - 1) Serial.print(",");
-    else Serial.print(",");
-  }
-  //MaxValueC
-  for (int i = 0; i < 2; i++) {
-    Serial.print(MaxValueC[i]);
-    if (i < 2 - 1) Serial.print(",");
     else Serial.println(");");
   }
 
@@ -385,11 +279,6 @@ void SerialSensor() {
       Serial.print(F[_serialF]);
       Serial.print("\t");
     }
-    // ค่าเซนเซอร์ C (Mark) ซ้าย / ขวา
-    Serial.print("| C: ");
-    Serial.print(C[0]);
-    Serial.print("\t");
-    Serial.print(C[1]);
     Serial.println("");
     delay(50);
   }
@@ -404,46 +293,7 @@ void SerialCalibrateSensor() {
       Serial.print(F[_serialF]);
       Serial.print("\t");
     }
-    // ค่าเซนเซอร์ C (Mark) ซ้าย / ขวา
-    Serial.print("| C: ");
-    Serial.print(C[0]);
-    Serial.print("\t");
-    Serial.print(C[1]);
     Serial.println("");
-    delay(100);
-  }
-}
-
-// Serial Monitor ค่าเซนเซอร์ C (Mark) : ค่าดิบ , ค่าที่ Calibrate แล้ว และสถานะ Mark
-void SerialSensorC() {
-  Serial.print("MinC: ");
-  Serial.print(MinValueC[0]);
-  Serial.print(", ");
-  Serial.print(MinValueC[1]);
-  Serial.print("   MaxC: ");
-  Serial.print(MaxValueC[0]);
-  Serial.print(", ");
-  Serial.print(MaxValueC[1]);
-  Serial.print("   RefC: ");
-  Serial.println(RefC);
-  while (1) {
-    ReadC();
-    int raw0 = C[0];
-    int raw1 = C[1];
-    ReadCalibrateC();
-    Serial.print("Raw C0 = ");
-    Serial.print(raw0);
-    Serial.print("\tC1 = ");
-    Serial.print(raw1);
-    Serial.print("\t| Cal C0 = ");
-    Serial.print(C[0]);
-    Serial.print("\tC1 = ");
-    Serial.print(C[1]);
-    Serial.print("\t| ");
-    if (C[0] > RefC && C[1] > RefC) Serial.println("CROSS");
-    else if (C[1] > RefC) Serial.println("MARK RIGHT");
-    else if (C[0] > RefC) Serial.println("MARK LEFT");
-    else Serial.println("-");
     delay(100);
   }
 }
