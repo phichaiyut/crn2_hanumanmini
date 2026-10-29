@@ -131,12 +131,13 @@ int readPosition(int start, int end, int Track, int noise) {
 }
 
 // ==================================================================================
-//  PID 1 รอบ (เซนเซอร์ 16 ช่อง)  สูตร: Kp * (Error / 1000) + (Kd / 100) * (Error - LastError)
+//  PID 1 รอบ (เซนเซอร์ 16 ช่อง)  สูตร: Kp * Error + Kd * (Error - LastError)
+//    Kp เป็นทศนิยม 3 ตำแหน่ง เช่น 0.015, Kd เป็นทศนิยม 2 ตำแหน่ง เช่น 0.25
 // ==================================================================================
 void PID(int SpeedL, int SpeedR, float Kp, float Kd) {
   int Pos = readPosition(250, 50);
   int Error = Pos - 7500;
-  int PID_Value = (Kp * (Error / 1000)) + ((Kd / 100) * (Error - LastError));
+  int PID_Value = (Kp * Error) + (Kd * (Error - LastError));
   LastError = Error;
   int LeftPower = SpeedL + PID_Value;
   int RightPower = SpeedR - PID_Value;
@@ -145,12 +146,13 @@ void PID(int SpeedL, int SpeedR, float Kp, float Kd) {
 }
 
 // ==================================================================================
-//  PID 1 รอบ (เซนเซอร์ช่อง start ถึง end)  สูตร: (Kp / 1000) * Error + (Kd / 100) * (Error - LastError)
+//  PID 1 รอบ (เซนเซอร์ช่อง start ถึง end)  สูตร: Kp * Error + Kd * (Error - LastError)
+//    Kp เป็นทศนิยม 3 ตำแหน่ง เช่น 0.025, Kd เป็นทศนิยม 2 ตำแหน่ง เช่น 0.25
 // ==================================================================================
 void PID(int start, int end, int SpeedL, int SpeedR, float Kp, float Kd) {
   int Pos = readPosition(start, end, 250, 50);
   int Error = Pos - ((NUM_SENSORS - 1) * 1000 / 2);
-  int PID_Value = ((Kp / 1000) * Error) + ((Kd / 100) * (Error - LastError));
+  int PID_Value = (Kp * Error) + (Kd * (Error - LastError));
   LastError = Error;
   int LeftPower = SpeedL + PID_Value;
   int RightPower = SpeedR - PID_Value;

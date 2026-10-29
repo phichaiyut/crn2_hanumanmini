@@ -1,15 +1,15 @@
-// ตาราง KP/KD ของแต่ละช่วงความเร็ว Set_KP_KD(ช่วงความเร็ว, KP, KD);
+// ตาราง KP/KD ของแต่ละช่วงความเร็ว Set_KP_KD(ช่วงความเร็ว, KP (0.000), KD (0.00));
 void SetKpKd() {
-  Set_KP_KD(SPD_10, 4, 8);
-  Set_KP_KD(SPD_20, 5, 10);
-  Set_KP_KD(SPD_30, 14, 28);
-  Set_KP_KD(SPD_40, 14, 14);
-  Set_KP_KD(SPD_50, 15, 28);
-  Set_KP_KD(SPD_60, 22, 18);
-  Set_KP_KD(SPD_70, 26, 20);
-  Set_KP_KD(SPD_80, 30, 60);
-  Set_KP_KD(SPD_90, 12, 24);
-  Set_KP_KD(SPD_100, 13, 26);
+  Set_KP_KD(SPD_10, 0.004, 0.08);
+  Set_KP_KD(SPD_20, 0.005, 0.10);
+  Set_KP_KD(SPD_30, 0.014, 0.28);
+  Set_KP_KD(SPD_40, 0.014, 0.14);
+  Set_KP_KD(SPD_50, 0.015, 0.28);
+  Set_KP_KD(SPD_60, 0.022, 0.18);
+  Set_KP_KD(SPD_70, 0.026, 0.20);
+  Set_KP_KD(SPD_80, 0.030, 0.60);
+  Set_KP_KD(SPD_90, 0.012, 0.24);
+  Set_KP_KD(SPD_100, 0.013, 0.26);
 }
 
 // ค่าชดเชยเดินหน้า: ข้างไหนแรงกว่า ให้ใส่ค่าลดที่ข้างนั้น

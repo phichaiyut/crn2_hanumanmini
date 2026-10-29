@@ -10,8 +10,8 @@ void Mission() {
   Dottedline(0);       // ไม่มีเส้นประใส่ 0 >> มีเส้นประใส่ 1
   RefLineValue(400);   // ค่าในการจับเส้น เซนเซอร์หน้า (0-1000)
 
-  // TrackCrossC(20, 14, 14, 'r');  // ใช้เซนเซอร์คู่กลางในการนับแยก
+  // TrackCrossC(20, 0.014, 0.14, 'r');  // ใช้เซนเซอร์คู่กลางในการนับแยก
 
-  // TrackTimeForLineFast(ช่องเริ่ม, ช่องสุดท้าย, Speed, Kp, Kd, เวลา);
-  TrackTimeForLineFast(1, 14, 50, 25, 25, 1000);
+  // TrackTimeForLineFast(ช่องเริ่ม, ช่องสุดท้าย, Speed, Kp (0.000), Kd (0.00), เวลา);
+  TrackTimeForLineFast(1, 14, 50, 0.025, 0.25, 1000);
 }
