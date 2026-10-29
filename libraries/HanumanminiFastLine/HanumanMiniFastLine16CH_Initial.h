@@ -1,13 +1,21 @@
+// **********************************************************************************
+//  HanumanMiniFastLine16CH_Initial.h
+//  ตารางชดเชยความเร็ว (Balance) และค่า KP/KD แยกตามช่วงความเร็ว 10, 20, ..., 100
+// **********************************************************************************
+
+#ifndef HanumanMiniFastLine16CH_Initial_h
+#define HanumanMiniFastLine16CH_Initial_h
+
+#include <Arduino.h>
+
 int BaseSpeed, LeftBaseSpeed, RightBaseSpeed, BackLeftBaseSpeed, BackRightBaseSpeed;
 float PID_KP, PID_KD;
 
+int L[10], R[10];     // ค่าชดเชยเดินหน้า (ซ้าย, ขวา)
+int BL[10], BR[10];   // ค่าชดเชยถอยหลัง (ซ้าย, ขวา)
+float KP[10], KD[10]; // ค่า KP, KD ของแต่ละช่วงความเร็ว
 
-int L[10], R[10];
-int BL[10], BR[10];
-float KP[10], KD[10];
-
-
-// ��˹� index ���ӧ���
+// index ของช่วงความเร็ว
 #define SPD_10 0
 #define SPD_20 1
 #define SPD_30 2
@@ -19,125 +27,38 @@ float KP[10], KD[10];
 #define SPD_90 8
 #define SPD_100 9
 
+// ตั้งค่าชดเชยเดินหน้า: ความเร็วจริง = BaseSpeed - spdL / BaseSpeed - spdR
 void setBalanceSpeed(int ch, int spdL, int spdR) {
   L[ch] = spdL;
   R[ch] = spdR;
 }
 
+// ตั้งค่าชดเชยถอยหลัง
 void setBalanceBackSpeed(int ch, int spdL, int spdR) {
   BL[ch] = spdL;
   BR[ch] = spdR;
 }
 
-void Set_KP_KD(int ch, float kp,float kd){
+// ตั้งค่า KP, KD ของช่วงความเร็ว
+void Set_KP_KD(int ch, float kp, float kd) {
   KP[ch] = kp;
   KD[ch] = kd;
 }
 
-
-
+// คำนวณความเร็วซ้าย/ขวา และ KP/KD จาก BaseSpeed
+//   BaseSpeed <= 10 -> SPD_10, 11-20 -> SPD_20, ..., มากกว่า 90 -> SPD_100
 void InitialSpeed() {
-if (BaseSpeed <= 10) {
-    LeftBaseSpeed = BaseSpeed - L[SPD_10];
-    RightBaseSpeed = BaseSpeed - R[SPD_10];
-    BackLeftBaseSpeed = BaseSpeed - BL[SPD_10];
-    BackRightBaseSpeed = BaseSpeed - BL[SPD_10];
-    PID_KP = KP[SPD_10];  //forward PID
-    PID_KD = KD[SPD_10];
+  int idx;
+  if (BaseSpeed <= 10) idx = SPD_10;
+  else if (BaseSpeed > 90) idx = SPD_100;
+  else idx = (BaseSpeed - 1) / 10;
 
-   
-  }
-  else if (BaseSpeed <= 20) {
-    LeftBaseSpeed = BaseSpeed - L[SPD_20];
-    RightBaseSpeed = BaseSpeed - R[SPD_20];
-    BackLeftBaseSpeed = BaseSpeed - BL[SPD_20];
-    BackRightBaseSpeed = BaseSpeed - BL[SPD_20];
-    PID_KP = KP[SPD_20];  //forward PID
-    PID_KD = KD[SPD_20];
-
-  
-
-  }
-
-  else if (BaseSpeed <= 30) {
-    LeftBaseSpeed = BaseSpeed - L[SPD_30];
-    RightBaseSpeed = BaseSpeed - R[SPD_30];
-    BackLeftBaseSpeed = BaseSpeed - BL[SPD_30];
-    BackRightBaseSpeed = BaseSpeed - BL[SPD_30];
-    PID_KP = KP[SPD_30];  //forward PID
-    PID_KD = KD[SPD_30];
-
-
-
-  } else if (BaseSpeed <= 40) {
-    LeftBaseSpeed = BaseSpeed - L[SPD_40];
-    RightBaseSpeed = BaseSpeed - R[SPD_40];
-    BackLeftBaseSpeed = BaseSpeed - BL[SPD_40];
-    BackRightBaseSpeed = BaseSpeed - BL[SPD_40];
-    PID_KP = KP[SPD_40];  //forward PID
-    PID_KD = KD[SPD_40];  //11
-
-
-  } else if (BaseSpeed <= 50) {
-    LeftBaseSpeed = BaseSpeed - L[SPD_50];
-    RightBaseSpeed = BaseSpeed - R[SPD_50];
-    BackLeftBaseSpeed = BaseSpeed - BL[SPD_50];
-    BackRightBaseSpeed = BaseSpeed - BL[SPD_50];
-    PID_KP = KP[SPD_50];  //forward PID
-    PID_KD = KD[SPD_50]; //14
-
-    
-
-  } else if (BaseSpeed <= 60) {
-    LeftBaseSpeed = BaseSpeed - L[SPD_60];
-    RightBaseSpeed = BaseSpeed - R[SPD_60];
-    BackLeftBaseSpeed = BaseSpeed - BL[SPD_60];
-    BackRightBaseSpeed = BaseSpeed - BL[SPD_60];
-    PID_KP = KP[SPD_60];  //forward PID
-    PID_KD = KD[SPD_60];//17
-
-    
-
-  } else if (BaseSpeed <= 70) {
-    LeftBaseSpeed = BaseSpeed - L[SPD_70];
-    RightBaseSpeed = BaseSpeed - R[SPD_70];
-    BackLeftBaseSpeed = BaseSpeed - BL[SPD_70];
-    BackRightBaseSpeed = BaseSpeed - BL[SPD_70];
-    PID_KP = KP[SPD_70];  //forward PID
-    PID_KD = KD[SPD_70];//20
-
-    
-
-  } else if (BaseSpeed <= 80) {
-    LeftBaseSpeed = BaseSpeed - L[SPD_80];
-    RightBaseSpeed = BaseSpeed - R[SPD_80];
-    BackLeftBaseSpeed = BaseSpeed - BL[SPD_80];
-    BackRightBaseSpeed = BaseSpeed - BL[SPD_80];
-    PID_KP = KP[SPD_80];  //forward PID
-    PID_KD = KD[SPD_80]; //20
-
- 
-
-
-  } else if (BaseSpeed <= 90) {
-    LeftBaseSpeed = BaseSpeed - L[SPD_90];
-    RightBaseSpeed = BaseSpeed - R[SPD_90];
-    BackLeftBaseSpeed = BaseSpeed - BL[SPD_90];
-    BackRightBaseSpeed = BaseSpeed - BL[SPD_90];
-    PID_KP = KP[SPD_90];  //forward PID
-    PID_KD = KD[SPD_90];//22
-
-  
-
-
-  } else  {
-    LeftBaseSpeed = BaseSpeed - L[SPD_100];
-    RightBaseSpeed = BaseSpeed - R[SPD_100];
-    BackLeftBaseSpeed = BaseSpeed - BL[SPD_100];
-    BackRightBaseSpeed = BaseSpeed - BL[SPD_100];
-    PID_KP = KP[SPD_100];  //forward PID
-    PID_KD = KD[SPD_100];//25
-   
-    }
+  LeftBaseSpeed = BaseSpeed - L[idx];
+  RightBaseSpeed = BaseSpeed - R[idx];
+  BackLeftBaseSpeed = BaseSpeed - BL[idx];
+  BackRightBaseSpeed = BaseSpeed - BR[idx];
+  PID_KP = KP[idx];
+  PID_KD = KD[idx];
 }
 
+#endif

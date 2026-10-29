@@ -1,25 +1,48 @@
-#include <light_CD74HC4067.h>
+// **********************************************************************************
+//  HanumanMiniFastLine16CH_Sensor.h
+//  เซนเซอร์ 16 ช่อง (ผ่าน Multiplexer CD74HC4067), ปุ่ม OK, Buzzer และการ Calibrate
+// **********************************************************************************
+
+#ifndef HanumanMiniFastLine16CH_Sensor_h
+#define HanumanMiniFastLine16CH_Sensor_h
+
+#include <Arduino.h>
 #include <EEPROM.h>
-#define NUM_SENSORS 16
-#define OK_PIN 8
+#include "HanumanMiniFastLine16CH_CD74HC4067.h"
 
-#define PRESS 1
+#define NUM_SENSORS 16  // จำนวนเซนเซอร์หน้า
+#define OK_PIN 8        // ขาปุ่ม OK
+#define PRESS 1         // ค่าที่อ่านได้เมื่อกดปุ่ม
 
-CD74HC4067 my_mux(18, 17, 16, 15);
-const int signal_pin = A0;
-int MinValue[NUM_SENSORS];
-int MaxValue[NUM_SENSORS];
+// ----------------------------------------------------------------------------------
+//  ตัวแปรของเซนเซอร์
+// ----------------------------------------------------------------------------------
+HanumanMini_CD74HC4067 my_mux(18, 17, 16, 15);  // ขาเลือกช่อง S0, S1, S2, S3
+const int signal_pin = A0;                      // ขาอ่านค่าสัญญาณจาก Multiplexer
+
+int MinValue[NUM_SENSORS];  // ค่าต่ำสุดของแต่ละช่อง (ได้จากการ Calibrate)
+int MaxValue[NUM_SENSORS];  // ค่าสูงสุดของแต่ละช่อง (ได้จากการ Calibrate)
 uint8_t F_PIN[NUM_SENSORS] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-uint16_t F[NUM_SENSORS];
+uint16_t F[NUM_SENSORS];  // ค่าเซนเซอร์ล่าสุด (ดิบ หรือ 0-1000 หลัง Calibrate)
 uint16_t sensorValues[NUM_SENSORS];
-int LCh,LTurnSpdL, LTurnSpdR, TurnDelayL;
-int RCh,RTurnSpdL, RTurnSpdR, TurnDelayR;
-int LineColor = 0;
-int  BUZZER_PIN = 13;
-int volumesound = 2500;
-int REF = 0;
 
+// ----------------------------------------------------------------------------------
+//  ตัวแปรการเลี้ยว (ตั้งค่าผ่าน TurnSpeedLeft / TurnSpeedRight)
+// ----------------------------------------------------------------------------------
+int LCh, LTurnSpdL, LTurnSpdR, TurnDelayL;
+int RCh, RTurnSpdL, RTurnSpdR, TurnDelayR;
 
+// ----------------------------------------------------------------------------------
+//  ตัวแปรตั้งค่าทั่วไป
+// ----------------------------------------------------------------------------------
+int LineColor = 0;       // 0 = เส้นดำ, 1 = เส้นขาว
+int BUZZER_PIN = 13;     // ขา Buzzer
+int volumesound = 2500;  // ความถี่เสียง Beep (Hz)
+int REF = 0;             // ค่าอ้างอิงในการจับเส้น (0-1000)
+
+// ==================================================================================
+//  ตั้งค่า
+// ==================================================================================
 void TrackLineColor(int Col) {
   LineColor = Col;
 }
@@ -28,26 +51,30 @@ void RefLineValue(int x) {
   REF = x;
 }
 
-void SetBUZZER_PIN(int x){
-    BUZZER_PIN = x;
+void SetBUZZER_PIN(int x) {
+  BUZZER_PIN = x;
 }
 
-void SetVolumeSound(int x){
-    volumesound = x;
+void SetVolumeSound(int x) {
+  volumesound = x;
 }
 
+// ==================================================================================
+//  เสียง Buzzer
+// ==================================================================================
 void Beep(int delayb) {
   tone(BUZZER_PIN, volumesound, delayb);
   delay(delayb);
   noTone(BUZZER_PIN);
 }
+
 void BZon() {
-  tone(BUZZER_PIN, volumesound);  // ส่งเสียง 1 kHz
+  tone(BUZZER_PIN, volumesound);  // เปิดเสียงค้างไว้
 }
+
 void BZoff() {
   noTone(BUZZER_PIN);  // หยุดเสียง
 }
-
 
 void b_beebb() {
   tone(BUZZER_PIN, 2000, 80);
@@ -59,7 +86,11 @@ void b_beebb() {
   tone(BUZZER_PIN, 2500, 150);
   delay(100);
 }
-void OK() {
+
+// ==================================================================================
+//  ปุ่ม OK
+// ==================================================================================
+void OK() {  // รอจนกว่าจะกดปุ่ม OK แล้ว Beep
   while (1) {
     if (digitalRead(OK_PIN) == PRESS) {
       break;
@@ -69,24 +100,29 @@ void OK() {
   delay(300);
 }
 
-int OK_PUSH() {
+int OK_PUSH() {  // คืนค่า PRESS ถ้ากำลังกดปุ่มอยู่ ไม่กดคืนค่า 0
   if (digitalRead(OK_PIN) == PRESS) return PRESS;
-  else {
-    return 0;
-  }
+  return 0;
 }
 
+// ==================================================================================
+//  อ่านค่า Analog ของบอร์ดโดยตรง (ช่อง 0-7 = A0-A7)
+// ==================================================================================
 int analog(int __ch) {
-  if(__ch==0) return analogRead(A0);
-  if(__ch==1) return analogRead(A1);
-  if(__ch==2) return analogRead(A2);
-  if(__ch==3) return analogRead(A3);
-  if(__ch==4) return analogRead(A4);
-  if(__ch==5) return analogRead(A5);
-  if(__ch==6) return analogRead(A6);
-  if(__ch==7) return analogRead(A7);
+  if (__ch == 0) return analogRead(A0);
+  if (__ch == 1) return analogRead(A1);
+  if (__ch == 2) return analogRead(A2);
+  if (__ch == 3) return analogRead(A3);
+  if (__ch == 4) return analogRead(A4);
+  if (__ch == 5) return analogRead(A5);
+  if (__ch == 6) return analogRead(A6);
+  if (__ch == 7) return analogRead(A7);
+  return 0;  // ช่องไม่ถูกต้อง
 }
 
+// ==================================================================================
+//  บันทึก / โหลดค่า Calibrate กับ EEPROM
+// ==================================================================================
 void SaveCalibration() {
   int addr = 0;
 
@@ -104,8 +140,6 @@ void SaveCalibration() {
 
   Serial.println("Saved to EEPROM");
 }
-
-#include <EEPROM.h>
 
 void LoadCalibration() {
   int addr = 0;
@@ -143,48 +177,37 @@ void LoadCalibration() {
   Serial.println("=====================================");
 }
 
-int analog16(int channel) {
+// ==================================================================================
+//  อ่านค่าเซนเซอร์
+// ==================================================================================
+int analog16(int channel) {  // อ่านค่าดิบ 1 ช่องผ่าน Multiplexer (0-15)
   my_mux.channel(channel);
   int val = analogRead(signal_pin);
   return val;
 }
 
-void Read() {
+void Read() {  // อ่านค่าดิบทั้ง 16 ช่อง เก็บใน F[]
   for (int _sensor = 0; _sensor < NUM_SENSORS; _sensor++) {
     F[_sensor] = analog16(F_PIN[_sensor]);
   }
 }
 
-void ReadCalibrate() {
-  if(LineColor ==0){
- Read();
+void ReadCalibrate() {  // อ่านค่าแล้วแปลงเป็น 0-1000 (ค่ามาก = อยู่บนเส้น)
+  Read();
   for (int i = 0; i < NUM_SENSORS; i++) {
-    unsigned int calmin, calmax;
-    long x = 0;
-    calmin = MinValue[i];
-    calmax = MaxValue[i];
-    x = map(F[i], calmin, calmax, 0, 1000);
+    unsigned int calmin = MinValue[i];
+    unsigned int calmax = MaxValue[i];
+    long x = map(F[i], calmin, calmax, 0, 1000);
+    if (LineColor != 0) x = 800 - x;  // เส้นขาว: กลับค่า
     if (x < 0) x = 0;
     if (x > 1000) x = 1000;
     F[i] = x;
   }
-  }else{
-        Read();
-    for (int i = 0; i < NUM_SENSORS; i++) {
-      unsigned int calmin, calmax;
-      int x = 0;
-      calmin = MinValue[i];
-      calmax = MaxValue[i];
-      x = map(F[i], calmin, calmax, 0, 1000);
-      x = 800 - x;
-      if (x < 0) x = 0;
-      if (x > 1000) x = 1000;
-      F[i] = x;
-    }
-  }
- 
 }
 
+// ==================================================================================
+//  Calibrate
+// ==================================================================================
 void CalibrateSensor(int pauseTime, int samples) {
   for (int i = 0; i < NUM_SENSORS; i++) {
     MinValue[i] = 1000;
@@ -213,15 +236,14 @@ void CaliberateRobotSensor() {
   delay(500);
   Serial.println("Finish");
   Serial.println("  ");
+
+  // พิมพ์ออกมาเป็นคำสั่ง SensorValue(...) พร้อมคัดลอกไปใส่ใน setting.ino
   Serial.print("SensorValue (");
-  //MinValue
-  for (int i = 0; i < NUM_SENSORS; i++) {
+  for (int i = 0; i < NUM_SENSORS; i++) {  // MinValue
     Serial.print(MinValue[i]);
-    if (i < NUM_SENSORS - 1) Serial.print(",");
-    else Serial.print(",");
+    Serial.print(",");
   }
-  //MaxValue
-  for (int i = 0; i < NUM_SENSORS; i++) {
+  for (int i = 0; i < NUM_SENSORS; i++) {  // MaxValue
     Serial.print(MaxValue[i]);
     if (i < NUM_SENSORS - 1) Serial.print(",");
     else Serial.println(");");
@@ -229,50 +251,31 @@ void CaliberateRobotSensor() {
 
   SaveCalibration();
   b_beebb();
-//   while (1)
-//     ;
 }
 
-void SensorValue(uint16_t minF0, uint16_t minF1, uint16_t minF2, uint16_t minF3, uint16_t minF4, uint16_t minF5, uint16_t minF6, uint16_t minF7, uint16_t minF8, uint16_t minF9, uint16_t minF10, uint16_t minF11, uint16_t minF12, uint16_t minF13, uint16_t minF14, uint16_t minF15, uint16_t maxF0, uint16_t maxF1, uint16_t maxF2, uint16_t maxF3,
-                 uint16_t maxF4, uint16_t maxF5, uint16_t maxF6, uint16_t maxF7, uint16_t maxF8, uint16_t maxF9, uint16_t maxF10, uint16_t maxF11, uint16_t maxF12, uint16_t maxF13, uint16_t maxF14, uint16_t maxF15) {
-  MinValue[0] = minF0;
-  MinValue[1] = minF1;
-  MinValue[2] = minF2;
-  MinValue[3] = minF3;
-  MinValue[4] = minF4;
-  MinValue[5] = minF5;
-  MinValue[6] = minF6;
-  MinValue[7] = minF7;
-  MinValue[8] = minF8;
-  MinValue[9] = minF9;
-  MinValue[10] = minF10;
-  MinValue[11] = minF11;
-  MinValue[12] = minF12;
-  MinValue[13] = minF13;
-  MinValue[14] = minF14;
-  MinValue[15] = minF15;
-
-  MaxValue[0] = maxF0;
-  MaxValue[1] = maxF1;
-  MaxValue[2] = maxF2;
-  MaxValue[3] = maxF3;
-  MaxValue[4] = maxF4;
-  MaxValue[5] = maxF5;
-  MaxValue[6] = maxF6;
-  MaxValue[7] = maxF7;
-  MaxValue[8] = maxF8;
-  MaxValue[9] = maxF9;
-  MaxValue[10] = maxF10;
-  MaxValue[11] = maxF11;
-  MaxValue[12] = maxF12;
-  MaxValue[13] = maxF13;
-  MaxValue[14] = maxF14;
-  MaxValue[15] = maxF15;
+// ตั้งค่า Min (16 ค่า) และ Max (16 ค่า) ของเซนเซอร์เอง
+void SensorValue(uint16_t minF0, uint16_t minF1, uint16_t minF2, uint16_t minF3,
+                 uint16_t minF4, uint16_t minF5, uint16_t minF6, uint16_t minF7,
+                 uint16_t minF8, uint16_t minF9, uint16_t minF10, uint16_t minF11,
+                 uint16_t minF12, uint16_t minF13, uint16_t minF14, uint16_t minF15,
+                 uint16_t maxF0, uint16_t maxF1, uint16_t maxF2, uint16_t maxF3,
+                 uint16_t maxF4, uint16_t maxF5, uint16_t maxF6, uint16_t maxF7,
+                 uint16_t maxF8, uint16_t maxF9, uint16_t maxF10, uint16_t maxF11,
+                 uint16_t maxF12, uint16_t maxF13, uint16_t maxF14, uint16_t maxF15) {
+  const uint16_t mins[NUM_SENSORS] = { minF0, minF1, minF2, minF3, minF4, minF5, minF6, minF7,
+                                       minF8, minF9, minF10, minF11, minF12, minF13, minF14, minF15 };
+  const uint16_t maxs[NUM_SENSORS] = { maxF0, maxF1, maxF2, maxF3, maxF4, maxF5, maxF6, maxF7,
+                                       maxF8, maxF9, maxF10, maxF11, maxF12, maxF13, maxF14, maxF15 };
+  for (int i = 0; i < NUM_SENSORS; i++) {
+    MinValue[i] = mins[i];
+    MaxValue[i] = maxs[i];
+  }
 }
 
-
-
-void SerialSensor() {
+// ==================================================================================
+//  แสดงค่าเซนเซอร์ทาง Serial Monitor (วนไม่รู้จบ ใช้ตอนทดสอบ)
+// ==================================================================================
+void SerialSensor() {  // ค่าดิบ
   while (1) {
     Read();
     for (int _serialF = 0; _serialF < NUM_SENSORS; _serialF++) {
@@ -284,9 +287,7 @@ void SerialSensor() {
   }
 }
 
-
-
-void SerialCalibrateSensor() {
+void SerialCalibrateSensor() {  // ค่าที่ Calibrate แล้ว (0-1000)
   while (1) {
     ReadCalibrate();
     for (int _serialF = 0; _serialF < NUM_SENSORS; _serialF++) {
@@ -297,3 +298,5 @@ void SerialCalibrateSensor() {
     delay(100);
   }
 }
+
+#endif
